@@ -16,6 +16,9 @@ public class Manager
 {
 	public static final String MAC_KEY = "MAC";
 	public static final String OPP_MODE_KEY = "OPP_MODE";
+	public static final String ACK_KEY = "ACK";
+	public static final String TIC_KEY = "TIC";
+	
 	public static final int OPP_MODE_AUTHENTIC = 0;
 	public static final int OPP_MODE_DUBIOUS = 1;
 	
@@ -63,34 +66,22 @@ public class Manager
 	
 	private void sendTic(String msgRead) 
 	{
-		int oppMode = getOppMode(msgRead);
-		String mac = getMac(msgRead);
-		addHistoryEntry(mac, oppMode);	
+		String mac = msgRead;
+		addHistoryEntry(mac, OPP_MODE_AUTHENTIC);
 
 		try 
 		{
 			int secs = new Random().nextInt(5) + 8;
-			String msg = "tic:" + secs;
-			this.communicationService.sendMessage(msgRead, msg);
+			
+			String msg = "{"+ TIC_KEY + ":" + secs +"}";
+			
+			this.communicationService.sendMessage(mac, msg);
 		} 
 		catch (IOException e) 
 		{
 			showToast(e.getMessage());
 			e.printStackTrace();
 		}
-	}
-	
-	/**
-	 * 
-	 * @param msgRead message on format {MAC:'mac',OPP_MODE:'oppMode'}
-	 * @return
-	 */
-	private String getMac(String msgRead) 
-	{
-		JSONObject json = new JSONObject(msgRead);
-		String mac = json.getString(MAC_KEY);
-		
-		return mac;
 	}
 
 
@@ -140,13 +131,20 @@ public class Manager
 	}
 
 
-	//TODO
-	private void readAck(String readMessage) 
-	{
-		if(readMessage.contains("ack"))
+	/**
+	 * receives a message on format {MAC:'mac',OPP_MODE:0, ack:true}
+	 * @param msgRead
+	 */
+	private void readAck(String msgRead) 
+	{		
+		JSONObject json = new JSONObject(msgRead);
+		if(json.has(ACK_KEY))
 		{
-			String remoteMac = readMessage.replace(":ack", "");
-
+			int oppMode = getOppMode(msgRead);
+			
+			String remoteMac = json.getString(MAC_KEY);
+			addHistoryEntry(remoteMac, oppMode);
+			
 			communicationService.stopComunicationThread(remoteMac);
 		}
 	}

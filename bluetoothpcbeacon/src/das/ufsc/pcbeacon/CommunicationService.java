@@ -132,6 +132,7 @@ public class CommunicationService
 			} 
 			catch (IOException e) 
 			{
+				System.out.println("I/O exception has occurred");
 				e.printStackTrace();
 				return;
 			}
