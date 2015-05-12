@@ -50,7 +50,10 @@ public class Manager
 		{
 		case CommunicationService.MSG_TYPE_MESSAGE_READ:
 		{
-			readAck(msg);
+			if(msg != null && msg.length()>0)
+			{
+				readAck(msg);
+			}
 
 			break;
 		}
@@ -136,7 +139,9 @@ public class Manager
 	 * @param msgRead
 	 */
 	private void readAck(String msgRead) 
-	{		
+	{	
+		System.out.println("onReadAck: [" +msgRead +"]");
+			
 		JSONObject json = new JSONObject(msgRead);
 		if(json.has(ACK_KEY))
 		{
