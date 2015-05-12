@@ -208,7 +208,6 @@ public class CommunicationService
 	            	
 	                String cmd = new String(buffer.toByteArray(), "UTF-8");
 
-	                cmd = this.remoteAddress + ":" + cmd;
 	                mHandler.handleMessage(MSG_TYPE_MESSAGE_READ, cmd);
 	            } 
 	            catch (IOException e) 
