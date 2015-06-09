@@ -63,7 +63,16 @@ public class CommunicationService
 	
 	public synchronized void stop()
 	{
-		if (mServerThread != null) { mServerThread = null;}
+		if (mServerThread != null) 
+		{ 
+			mServerThread.terminate();
+			mServerThread = null;
+		}
+		
+		for(String mac : this.pool.keySet())
+		{
+			this.pool.get(mac).cancel();
+		}
 	}
 	
 	
@@ -106,6 +115,13 @@ public class CommunicationService
 	
 	private class WaitThread extends Thread
 	{
+		private volatile boolean running = true;
+
+		public void terminate() 
+		{
+			this.running = false;
+		}
+		
 		@Override
 		public void run() 
 		{
@@ -139,7 +155,7 @@ public class CommunicationService
 
 			// waiting for connection
 			System.out.println("waiting for connection...");
-			while(true)
+			while(this.running)
 			{
 				try
 				{
@@ -163,7 +179,7 @@ public class CommunicationService
 		private final StreamConnection streamConnection;
 	    private final InputStream mmInStream;
 	    private final OutputStream mmOutStream;
-	    private boolean canceled = false;
+	    private volatile boolean running = true;
 	    private String remoteAddress;
 	 
 	    public ReadWriteThread(StreamConnection st) 
@@ -189,7 +205,7 @@ public class CommunicationService
 	    public void run() 
 	    {
 	        // Keep listening to the InputStream until canceled
-	        while (!canceled) 
+	        while (this.running) 
 	        {
 	            try 
 	            {
@@ -231,7 +247,7 @@ public class CommunicationService
 	        catch (IOException e) { }
 	        finally
 	        {
-	        	canceled = true;
+	        	this.running = false;
 	        }
 	    }
 	}
