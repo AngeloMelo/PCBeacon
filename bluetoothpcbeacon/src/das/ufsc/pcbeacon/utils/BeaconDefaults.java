@@ -14,10 +14,18 @@ public class BeaconDefaults
 	public static final String OPP_MODE_KEY = "OPP_MODE";
 	public static final String ACK_KEY = "ACK";
 	public static final String TIC_KEY = "TIC";
+	public static final String TIC_LINEID_KEY = "LINEID";
+	public static final String TIC_LINENM_KEY = "LINENM";
+	public static final String TIC_LASTSTOPNM_KEY = "LASTSTOPNM";
+	public static final String TIC_NEXTSTOPNM_KEY = "NEXTSTOPNM";
+	
 	public static final String DISCOVERYDATE_KEY = "DISCTS";
 	public static final String BEACON_FOUND_TS_KEY = "BEACONFOUNDTS";
-	public static final String FIRSTCONNTS_KEY = "FIRSTCONNTS";
-	public static final String LASTCONNTS_KEY = "LASTCONNTS";
+	public static final String FIRST_CONN_ACCEPTANCE_TS_KEY = "FIRSTCONNACCEPTANCETS";
+	public static final String LAST_CONN_REQUEST_TS_KEY = "LASTCONNREQTS";
+	public static final String LAST_CONN_ACCEPTANCE_TS_KEY = "LASTCONNACCEPTANCETS";
+	public static final String LAST_TIC_RECEIVED_TS_KEY = "LASTTICRECEIVEDTS";
+	public static final String LAST_ACK_SENT_TS_KEY = "LASTACKSENTTS";
 	
 	//OPP MODES
 	public static final int OPP_MODE_AUTHENTIC = 0;
@@ -25,10 +33,14 @@ public class BeaconDefaults
 	
 	
 	
-	public static String getTicJson(int secs)
+	public static String getTicJson(int secs, int lineId, String lineName, String lastStop)
 	{
-		String msg = "{"+ BeaconDefaults.TIC_KEY + ":" + secs +"}";
-
+		String msg = "{"+ BeaconDefaults.TIC_KEY + ":" + secs;
+		msg = msg + "," + BeaconDefaults.TIC_LINEID_KEY + ":" + lineId;
+		msg = msg + "," + BeaconDefaults.TIC_LINENM_KEY + ":'" + lineName + "'";
+		msg = msg + "," + BeaconDefaults.TIC_LASTSTOPNM_KEY + ":'" + lastStop + "'";
+		msg = msg + "}";
+		
 		return msg;
 	}
 	
@@ -77,11 +89,11 @@ public class BeaconDefaults
 	}
 
 	
-	public static Date getFirstConnectionTs(JSONObject json) throws ParseException 
+	public static Date getFirstConnectionAcceptanceTs(JSONObject json) throws ParseException 
 	{
-		if(json.has(BeaconDefaults.FIRSTCONNTS_KEY))
+		if(json.has(BeaconDefaults.FIRST_CONN_ACCEPTANCE_TS_KEY))
 		{
-			String strDate = json.getString(BeaconDefaults.FIRSTCONNTS_KEY);
+			String strDate = json.getString(BeaconDefaults.FIRST_CONN_ACCEPTANCE_TS_KEY);
 			
 			return parseDate(strDate);
 		}
@@ -89,16 +101,53 @@ public class BeaconDefaults
 	}
 	
 
-	public static Date getLastAcceptedConnectionTs(JSONObject json) throws ParseException 
+	public static Date getLastConnectionRequestTs(JSONObject json) throws ParseException 
 	{
-		if(json.has(BeaconDefaults.LASTCONNTS_KEY))
+		if(json.has(BeaconDefaults.LAST_CONN_REQUEST_TS_KEY))
 		{
-			String strDate = json.getString(BeaconDefaults.LASTCONNTS_KEY);
+			String strDate = json.getString(BeaconDefaults.LAST_CONN_REQUEST_TS_KEY);
 			
 			return parseDate(strDate);
 		}
 		return null;
 	}
+	
+	
+	public static Date getLastConnectionAcceptanceTs(JSONObject json) throws ParseException 
+	{
+		if(json.has(BeaconDefaults.LAST_CONN_ACCEPTANCE_TS_KEY))
+		{
+			String strDate = json.getString(BeaconDefaults.LAST_CONN_ACCEPTANCE_TS_KEY);
+			
+			return parseDate(strDate);
+		}
+		return null;
+	}
+
+	
+	public static Date getLastTicReceivedTs(JSONObject json) throws ParseException 
+	{
+		if(json.has(BeaconDefaults.LAST_TIC_RECEIVED_TS_KEY))
+		{
+			String strDate = json.getString(BeaconDefaults.LAST_TIC_RECEIVED_TS_KEY);
+			
+			return parseDate(strDate);
+		}
+		return null;
+	}
+
+	
+	public static Date getLastAckSentTs(JSONObject json) throws ParseException 
+	{
+		if(json.has(BeaconDefaults.LAST_ACK_SENT_TS_KEY))
+		{
+			String strDate = json.getString(BeaconDefaults.LAST_ACK_SENT_TS_KEY);
+			
+			return parseDate(strDate);
+		}
+		return null;
+	}
+
 
 		
 	private static Date parseDate(String strDate) throws ParseException 

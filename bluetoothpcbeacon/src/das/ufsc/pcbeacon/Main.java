@@ -10,18 +10,35 @@ public class Main{
 	{
 		Manager manager = new Manager();
 
-		List<StopInfo> stopList = new ArrayList<>();
+		List<TripSegmentInfo> stopList = new ArrayList<>();
 		
-		stopList.add(new StopInfo(1, "TICEN", 20));
-		stopList.add(new StopInfo(2, "Prainha", 20));
-		stopList.add(new StopInfo(3, "Penhasco", 20));
-		stopList.add(new StopInfo(4, "José Mendes", 20));
-		stopList.add(new StopInfo(5, "Saco dos Limões - Praça", 20));
-		stopList.add(new StopInfo(6, "Saco dos Limões - Colégio", 20));
-		stopList.add(new StopInfo(7, "Morro da Carvoeira", 20));
-		stopList.add(new StopInfo(8, "Morro da Carvoeira 2", 20));
-		stopList.add(new StopInfo(9, "UFSC - CFH", 20));/*
-		stopList.add(new StopInfo(10, "UFSC - BU", 6));
+		int stopTime = 10;
+		int tripSegmentTime = 35;
+		
+		stopList.add(new TripSegmentInfo(1, "TICEN", "", stopTime, true));
+		stopList.add(new TripSegmentInfo(2, "TICEN", "Prainha", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(3, "Stop on Prainha", "", stopTime, true));
+		
+		stopList.add(new TripSegmentInfo(4, "Prainha", "Penhasco", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(5, "Stop on Penhasco", "", stopTime, true));
+		
+		stopList.add(new TripSegmentInfo(6, "Penhasco", "Jose Mendes", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(7, "Stop on Jose Mendes", "", stopTime, true));
+		
+		stopList.add(new TripSegmentInfo(8, "Jose Mendes", "Saco dos Limoes", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(9, "Stop on Saco dos Limoes", "", stopTime, true));
+		
+		stopList.add(new TripSegmentInfo(10, "Saco dos Limoes", "Morro da Carvoeira", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(11, "Stop on Morro da Carvoeira", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(12, "Morro da Carvoeira", "UFSC - CFH", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(13, "Stop on UFSC - CFH", "", stopTime, true));
+		
+		/*
+		stopList.add(new StopInfo(7, "", 35));
+		stopList.add(new StopInfo(8, "", 35));
+		stopList.add(new StopInfo(9, "UFSC - BU", 35));
+		stopList.add(new StopInfo(10, "", 6));
 		stopList.add(new StopInfo(11, "Praça Pida", 6));
 		stopList.add(new StopInfo(12, "Capitão Gourmet", 6));
 		stopList.add(new StopInfo(13, "Hospital Infantil", 6));

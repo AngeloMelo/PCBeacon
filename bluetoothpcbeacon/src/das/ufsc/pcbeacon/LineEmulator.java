@@ -16,21 +16,17 @@ public class LineEmulator extends Thread
 	
 	public void run() 
 	{
-		boolean first = true;
+		//while(!this.managerRef.isBluetoothReady());
 		
-		for(StopInfo stopInfo : this.lineInfo.getStopList())
+		this.managerRef.setLineInfo(this.lineInfo);
+		
+		for(TripSegmentInfo tripSegmentInfo : this.lineInfo.getTripSegmentList())
 		{
-			this.managerRef.setCurrentStopInfo(stopInfo);
-			
-			if(first)
-			{
-				try { sleep(15 * 1000); } catch (InterruptedException e1) {}
-				first = false;
-			}
+			this.managerRef.setCurrentTripSegmentInfo(tripSegmentInfo);
 			
 			try 
 			{
-				sleep(stopInfo.getNextStopTime()* 1000);
+				sleep(tripSegmentInfo.getTripSegmentTime() * 1000);
 			} 
 			catch (InterruptedException e) 
 			{
@@ -39,6 +35,7 @@ public class LineEmulator extends Thread
 		}	
 		
 		this.managerRef.stop();
+		this.managerRef.removeDubious();
 		this.managerRef.printTotalBySegmentsReport();
 		this.managerRef.printODReport();
 		this.managerRef.printPerformanceReport();
@@ -49,64 +46,106 @@ class LineInfo
 {
 	private int lineId;
 	private String lineNm;
-	private List<StopInfo> stopList;
+	private List<TripSegmentInfo> tripSegmentList;
 	
-	public LineInfo(int lineId, String lineNm, List<StopInfo> stopList) 
+	public LineInfo(int lineId, String lineNm, List<TripSegmentInfo> tripSegmentList) 
 	{
 		super();
 		this.lineId = lineId;
 		this.lineNm = lineNm;
-		this.stopList = stopList;
+		this.tripSegmentList = tripSegmentList;
 	}
 
-	public List<StopInfo> getStopList() 
+	public List<TripSegmentInfo> getTripSegmentList() 
 	{
-		return this.stopList;
+		return this.tripSegmentList;
+	}
+
+	public int getLineId() {
+		return lineId;
+	}
+
+	public String getLineNm() {
+		return lineNm;
 	};
+	
+	public TripSegmentInfo getNextStopOf(TripSegmentInfo from)
+	{
+		int index = this.tripSegmentList.indexOf(from);
+		
+		if(index == this.tripSegmentList.size() - 1) return from;
+		
+		return this.tripSegmentList.get(index + 1);
+	}
 }
 
 
-
-class StopInfo
+class TripSegmentInfo
 {
-	private int stopId;
-	private String stopName;
-	private int nextStopTime;
-	private Date stopTs;
+	private int tripSegmentId;
+	private String tripSegmentDestination;
+	private String tripSegmentOrign;
+	private int tripSegmentTime;
+	private Date tripSegmentStartTs;
+	private boolean stop;
 	
-	
-	public StopInfo(int stopId, String stopNm, int nextStopTime) 
+	public TripSegmentInfo()
 	{
 		super();
-		this.stopId = stopId;
-		this.stopName = stopNm;
-		this.nextStopTime = nextStopTime;
-	};
+	}
 	
 	
-	public int getNextStopTime()
+	public TripSegmentInfo(int tripSegmentId, String tripSegmentOrign, String tripSegmentDestination, int tripSegmentTime, boolean stop) 
 	{
-		return this.nextStopTime;
+		super();
+		this.tripSegmentId = tripSegmentId;
+		this.tripSegmentOrign = tripSegmentOrign;
+		this.tripSegmentDestination = tripSegmentDestination;
+		this.tripSegmentTime = tripSegmentTime;
+		this.stop = stop;
+	}
+
+
+	public boolean isStop() {
+		return stop;
+	}
+
+	public int getTripSegmentId() {
+		return tripSegmentId;
+	}
+
+	public void setTripSegmentId(int tripSegmentId) {
+		this.tripSegmentId = tripSegmentId;
+	}
+
+	public String getTripSegmentDestination() {
+		return tripSegmentDestination;
+	}
+
+	public String getTripSegmentOrign() 
+	{
+		return this.tripSegmentOrign;
+	}
+
+	public int getTripSegmentTime() {
+		return tripSegmentTime;
+	}
+
+	public void setTripSegmentTime(int tripSegmentTime) {
+		this.tripSegmentTime = tripSegmentTime;
+	}
+
+	public void setStop(boolean stop) {
+		this.stop = stop;
+	}
+
+	public Date getTripSegmentStartTs() {
+		return tripSegmentStartTs;
+	}
+
+	public void setTripSegmentStartTs(Date tripSegmentStartTs) {
+		this.tripSegmentStartTs = tripSegmentStartTs;
 	}
 	
-
-	public int getStopId() {
-		return stopId;
-	}
-
-
-	public String getStopName() {
-		return stopName;
-	}
-
-
-	public Date getStopTs() {
-		return stopTs;
-	}
-
 	
-	public void setStopTs(Date stopTs) {
-		this.stopTs = stopTs;
-	}
-
 }

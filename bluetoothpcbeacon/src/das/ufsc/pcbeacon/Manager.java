@@ -13,25 +13,25 @@ import java.util.Random;
 import org.json.JSONObject;
 
 import das.ufsc.pcbeacon.utils.BeaconDefaults;
-import das.ufsc.pcbeacon.utils.CallInfo;
 
 public class Manager 
 {
 	private CommunicationService communicationService;
-	private StopInfo currentStopInfo;
-	private List<StopInfo> stopInfoList;
-	private Map<String, List<CallInfo>> deviceCalls;
+	private TripSegmentInfo currentTripSegmentInfo;
+	private List<TripSegmentInfo> tripSegmentList;
+	private Map<String, CallHistoric> deviceCalls;
+	private LineInfo lineInfo;
 	
 	public Manager()
 	{
 		super();
 			
-		this.stopInfoList = new LinkedList<>();
+		this.tripSegmentList = new LinkedList<>();
 		//initializes the threads for connections
 		this.communicationService = new CommunicationService(this);
 		
 		//historic initialization, maps a mac address to a list of calls
-		this.deviceCalls = new HashMap<String, List<CallInfo>>();
+		this.deviceCalls = new HashMap<String, CallHistoric>();
 	}
 	
 	
@@ -46,7 +46,13 @@ public class Manager
 	{
 		//stop the thread for accepting connections
 		this.communicationService.stop();
-	}	
+	}
+	
+	
+	public synchronized boolean isBluetoothReady()
+	{
+		return this.communicationService.isBluetoothReady();
+	}
 
 	
 	public synchronized void handleMessage(int type, String msg) 
@@ -79,9 +85,16 @@ public class Manager
 
 		try 
 		{
-			int secs = new Random().nextInt(5) + 8;
+			int secs = new Random().nextInt(5) + 5;
 			
-			String msgTic = BeaconDefaults.getTicJson(secs);
+			int lineId = this.lineInfo.getLineId();
+			String lineName = this.lineInfo.getLineNm();
+			String lastStop = "Next stop: " + this.currentTripSegmentInfo.getTripSegmentDestination();
+			if(this.currentTripSegmentInfo.isStop())
+			{
+				lastStop = this.currentTripSegmentInfo.getTripSegmentOrign();
+			}
+			String msgTic = BeaconDefaults.getTicJson(secs, lineId, lineName, lastStop);
 			
 			this.communicationService.sendMessage(mac, msgTic);
 		} 
@@ -93,30 +106,45 @@ public class Manager
 	}
 
 
-
-	private synchronized void addHistoryEntry(String mac, int oppMode, Date startDiscoveryTs, Date beaconFoundTs, Date firstConnectionTs, Date lastAcceptedConnectionTs) 
+	private void addHistoryEntry(String mac, int oppMode,
+			Date startDiscoveryTs, Date beaconFoundTs,
+			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs,
+			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs)
 	{
 		Date timeStamp = new Date();
-		CallInfo hInfo = new CallInfo(timeStamp, oppMode, mac, this.currentStopInfo.getStopName(), this.currentStopInfo.getStopId(), this.currentStopInfo.getStopTs(), startDiscoveryTs, beaconFoundTs, firstConnectionTs, lastAcceptedConnectionTs);
-
+		
+		CallInfo callInfo = new CallInfo();
+		callInfo.setCallTimeStamp(timeStamp);
+		callInfo.setCurrentTripSegmentId(this.currentTripSegmentInfo.getTripSegmentId());
+		callInfo.setCurrentTripSegmentOrign(this.currentTripSegmentInfo.getTripSegmentOrign());
+		callInfo.setCurrentTripSegmentDestination(this.currentTripSegmentInfo.getTripSegmentDestination());
+		callInfo.setCurrentTripSegmentTs(this.currentTripSegmentInfo.getTripSegmentStartTs());
+		callInfo.setOppMode(oppMode);
+		callInfo.setLastConnectionRequestTs(lastConnectionRequestTs);
+		callInfo.setLastConnectionAcceptanceTs(lastConnectionAcceptanceTs);
+		callInfo.setLastTicTs(lastTicTs);
+		callInfo.setLastAckSentTs(lastAckSentTs);
+		
 		if(this.deviceCalls.containsKey(mac))
 		{
 			//get the stored list
-			List<CallInfo> privateList = deviceCalls.get(mac);
-			privateList.add(hInfo);
+			CallHistoric callHistoric = deviceCalls.get(mac);
+			callHistoric.getCalls().add(callInfo);
 		}
 		else
 		{
-			//add a new list
-			List<CallInfo> privateList  = new ArrayList<>();
-			privateList.add(hInfo);
+			//add a new 
+			CallHistoric callHistoric = new CallHistoric();
+			callHistoric.setMac(mac);
+			callHistoric.setStartDiscoveryTs(startDiscoveryTs);
+			callHistoric.setBeaconFoundTs(beaconFoundTs);
+			callHistoric.setFirstConnectionAcceptanceTs(firstConnectionAcceptanceTs);
 			
-			this.deviceCalls.put(mac, privateList);
+			callHistoric.getCalls().add(callInfo);
+			
+			this.deviceCalls.put(mac, callHistoric);
 		}
 		System.out.println("Total current (a/d): " + getTotalOnBoard() + "/" + getTotalDubious());
-		//prints the new entry
-		//SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSS");
-		//showToast("[" + mac + "] in at " + dateFormat.format(timeStamp) + " opp mode: " + oppMode);
 	}
 
 
@@ -132,18 +160,25 @@ public class Manager
 		{
 			JSONObject json = new JSONObject(msgRead);
 			if(json.has(BeaconDefaults.ACK_KEY))
-			{
-				int oppMode = BeaconDefaults.getOppMode(msgRead);
-				
+			{				
 				String remoteMac = json.getString(BeaconDefaults.MAC_KEY);
-
-				//get performance infos
-				Date startDiscoveryTs = BeaconDefaults.getStartDiscoveryTs(json);
-				Date beaconFoundTs = BeaconDefaults.getBeaconFoundTs(json);
-				Date firstConnectionTs = BeaconDefaults.getFirstConnectionTs(json);
-				Date lastAcceptedConnectionTs = BeaconDefaults.getLastAcceptedConnectionTs(json);
-
-				addHistoryEntry(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionTs, lastAcceptedConnectionTs);
+				
+				//register only if not on a stop
+				if(!this.currentTripSegmentInfo.isStop())
+				{
+					//get performance infos
+					Date startDiscoveryTs = BeaconDefaults.getStartDiscoveryTs(json);
+					Date beaconFoundTs = BeaconDefaults.getBeaconFoundTs(json);
+					Date firstConnectionAcceptanceTs = BeaconDefaults.getFirstConnectionAcceptanceTs(json);
+					Date lastConnectionRequestTs = BeaconDefaults.getLastConnectionRequestTs(json);
+					Date lastConnectionAcceptanceTs = BeaconDefaults.getLastConnectionAcceptanceTs(json);
+					Date lastTicTs = BeaconDefaults.getLastTicReceivedTs(json);
+					Date lastAckSentTs = BeaconDefaults.getLastAckSentTs(json);
+					
+					int oppMode = BeaconDefaults.getOppMode(msgRead);
+					addHistoryEntry(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+					validateHistoric(remoteMac, oppMode);
+				}
 				
 				this.communicationService.stopComunicationThread(remoteMac);
 			}		
@@ -153,22 +188,71 @@ public class Manager
 			
 		}
 	}
+
+
+	private void validateHistoric(String remoteMac, int oppMode) 
+	{
+		if(oppMode == BeaconDefaults.OPP_MODE_AUTHENTIC)
+		{
+			//valid the registers marked as dubious
+			List<CallInfo> calls = deviceCalls.get(remoteMac).getCalls();
+			
+			for(CallInfo callInfo : calls)
+			{
+				if(callInfo.getOppMode() == BeaconDefaults.OPP_MODE_DUBIOUS)
+				{
+					callInfo.setOppMode(BeaconDefaults.OPP_MODE_AUTHENTIC);
+				}
+			}
+		}
+	}
 	
 	
+	public void removeDubious() 
+	{
+		List<String> remove = new ArrayList<>();
+		for(String remoteMac: this.deviceCalls.keySet())
+		{	
+			CallHistoric callHistoric = deviceCalls.get(remoteMac);
+			
+			LinkedList<CallInfo> calls = (LinkedList<CallInfo>) callHistoric.getCalls();
+			if(calls.getLast().getOppMode() == BeaconDefaults.OPP_MODE_DUBIOUS)
+			{
+				//last call was as dubious, remove register
+				remove.add(remoteMac);
+			}
+		}
+		//remove dubious
+		for(String mac : remove)
+		{
+			this.deviceCalls.remove(mac);
+		}
+	}
+
+
 	private void showToast(String string) 
 	{
 		System.out.println(string);
 	}
 
 
-	public synchronized void setCurrentStopInfo(StopInfo stopInfo) 
+	public synchronized void setCurrentTripSegmentInfo(TripSegmentInfo tripSegmentInfo) 
 	{
-		this.currentStopInfo = stopInfo;
-		this.currentStopInfo.setStopTs(new Date());
-		this.stopInfoList.add(this.currentStopInfo);
+		this.currentTripSegmentInfo = tripSegmentInfo;
+		this.currentTripSegmentInfo.setTripSegmentStartTs(new Date());
+		String stopTs = new SimpleDateFormat("HH:mm:ss").format(this.currentTripSegmentInfo.getTripSegmentStartTs());
 		
 		System.out.println("-------------------------------------------------------------------------------------");
-		System.out.println("On Stop: " + this.currentStopInfo.getStopName() +"(" + this.currentStopInfo.getStopId() + ") at " + this.currentStopInfo.getStopTs());
+		if(this.currentTripSegmentInfo.isStop())
+		{
+			System.out.print("\t");
+			System.out.println(this.currentTripSegmentInfo.getTripSegmentOrign() +"(" + this.currentTripSegmentInfo.getTripSegmentId() + ") at " + stopTs);
+		}
+		else
+		{
+			this.tripSegmentList.add(this.currentTripSegmentInfo);
+			System.out.println("Next stop: " + this.currentTripSegmentInfo.getTripSegmentDestination() +"(" + this.currentTripSegmentInfo.getTripSegmentId() + ") at " + stopTs);
+		}
 	}
 
 	
@@ -187,15 +271,17 @@ public class Manager
 	private synchronized int getTotalCurrentByMode(int mode) 
 	{
 		int sum = 0;
+		if(this.currentTripSegmentInfo.isStop()) return sum;
+		
 		for(String mac : this.deviceCalls.keySet())
 		{
-			List<CallInfo> callsList = deviceCalls.get(mac);
+			List<CallInfo> callsList = deviceCalls.get(mac).getCalls();
 			boolean sameMode = true;
 			boolean hasOne = false;
 			for(CallInfo callInfo: callsList)
 			{
 				//select only for this stop
-				if(callInfo.getCurrentStopId() == this.currentStopInfo.getStopId())
+				if(callInfo.getCurrentTripSegmentId() == this.currentTripSegmentInfo.getTripSegmentId())
 				{
 					hasOne = true;
 					//sums only if all calls have the same mode
@@ -218,38 +304,27 @@ public class Manager
 	public void printTotalBySegmentsReport()
 	{
 		System.out.println("-------------------------------------------------------------------------------------");
-		System.out.printf("%-7s \t %-30s \t %-8s \t %s \n", "Stop ID", "Stop", "Hour", "Total on Board");
+		System.out.printf("%-5s \t %-30s \t %-8s \t %s \n", "Seg ID", "Segment", "Hour", "Total on Board");
 		
 		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-		for(StopInfo stopInfo : this.stopInfoList)
+		for(TripSegmentInfo tripSegmentInfo : this.tripSegmentList)
 		{
-			int totalOnSegment = getTotalOnSegment(stopInfo.getStopId());
-			System.out.printf("%-7s \t %-30s \t %-8s \t %d \n", stopInfo.getStopId(), stopInfo.getStopName(), sdf.format(stopInfo.getStopTs()), totalOnSegment);
+			int totalOnSegment = getTotalOnSegment(tripSegmentInfo.getTripSegmentId());
+			String segmentDescription = tripSegmentInfo.getTripSegmentOrign() + " to " + tripSegmentInfo.getTripSegmentDestination();
+			System.out.printf("%-5s \t %-30s \t %-8s \t %d \n", tripSegmentInfo.getTripSegmentId(), segmentDescription, sdf.format(tripSegmentInfo.getTripSegmentStartTs()), totalOnSegment);
 		}
 	}
 	
 	
-	private int getTotalOnSegment(int stopId) 
+	private int getTotalOnSegment(int tripSegmentId) 
 	{
 		int sum = 0;
 		for(String mac : this.deviceCalls.keySet())
 		{
-			List<CallInfo> callsList = this.deviceCalls.get(mac);
-			boolean isAuthentic = true;
-			boolean found = false;
-			for(CallInfo callInfo: callsList)
-			{
-				if(callInfo.getCurrentStopId() == stopId)
-				{
-					found = true;
-					if(callInfo.getOppMode() != BeaconDefaults.OPP_MODE_AUTHENTIC)
-					{
-						isAuthentic = false;
-						break;
-					}					
-				}
-			}
-			if(found && isAuthentic)
+			int originId = getOriginSegmentId(mac);
+			int destinId = getDestinSegmentId(mac);
+			
+			if(tripSegmentId >= originId && tripSegmentId <= destinId)
 			{
 				sum ++;
 			}
@@ -258,21 +333,53 @@ public class Manager
 	}
 
 
+	private int getOriginSegmentId(String mac) 
+	{
+		int result = 1000000;
+		
+		CallHistoric callHistoric = this.deviceCalls.get(mac);
+		for(CallInfo callInfo : callHistoric.getCalls())
+		{
+			if(callInfo.getCurrentTripSegmentId() < result)
+			{
+				result = callInfo.getCurrentTripSegmentId();
+			}
+		}
+		return result;
+	}
+	
+	
+	private int getDestinSegmentId(String mac) 
+	{
+		int result = -1;
+		
+		CallHistoric callHistoric = this.deviceCalls.get(mac);
+		for(CallInfo callInfo : callHistoric.getCalls())
+		{
+			if(callInfo.getCurrentTripSegmentId() > result)
+			{
+				result = callInfo.getCurrentTripSegmentId();
+			}
+		}
+		return result;
+	}
+
+
 	public void printODReport()
 	{
 		//prints the header
-		Object []arr = new Object[this.stopInfoList.size()+1];
+		Object []arr = new Object[this.tripSegmentList.size()+1];
 		String formatter = "%-SIZEs ";
 		int maxLength = 0;
 		int i = 1;
 		arr[0] = "Destinos: ";
-		for(StopInfo stopInfo : this.stopInfoList)
+		for(TripSegmentInfo tripSegmentInfo : this.tripSegmentList)
 		{
-			if(stopInfo.getStopName().length() > maxLength)
+			if(tripSegmentInfo.getTripSegmentDestination().length() > maxLength)
 			{
-				maxLength = stopInfo.getStopName().length();	
+				maxLength = tripSegmentInfo.getTripSegmentDestination().length();	
 			}
-			arr[i] = stopInfo.getStopName();
+			arr[i] = tripSegmentInfo.getTripSegmentDestination();
 			
 			i++;
 			
@@ -286,17 +393,16 @@ public class Manager
 		System.out.println("-------------------------------------------------------------------------------------");
 		System.out.printf(formatter, arr);
 		
-		
-		
-		for(StopInfo stopInfo : this.stopInfoList)
+		//print the body		
+		for(TripSegmentInfo tripSegmentOrign : this.tripSegmentList)
 		{
-			arr[0] = stopInfo.getStopName();
+			arr[0] = tripSegmentOrign.getTripSegmentOrign();
 			int lineIdx = 1;
 			
 			formatter = "%-" + maxLength + "s ";
-			for(StopInfo stopInfoLine : this.stopInfoList)
+			for(TripSegmentInfo tripSegmentDestin : this.tripSegmentList)
 			{	
-				arr[lineIdx] = getTotalTrip(stopInfo, stopInfoLine);
+				arr[lineIdx] = getTotalTrip(tripSegmentOrign, tripSegmentDestin);
 				
 				formatter = formatter + "%-" + maxLength + "s ";
 				lineIdx++;
@@ -307,105 +413,66 @@ public class Manager
 	}
 
 	
-	private int getTotalTrip(StopInfo stopInfoOrign, StopInfo stopInfoDestination) 
+	private int getTotalTrip(TripSegmentInfo origin, TripSegmentInfo destination) 
 	{
-		if(stopInfoOrign.getStopId() >= stopInfoDestination.getStopId()) return 0;
-		int sum = 0;
+		//descarta trechos percorridos antes do destino
+		if(origin.getTripSegmentId() >= destination.getTripSegmentId()) return 0;
 		
-		List<String> orignPop = getBoardingOnList(stopInfoOrign);	
+		int totalTrip = 0;
 		
+		//lista de passageiros que embarcaram em origin
+		List<String> originPassengers = getBoardingOnList(origin);
 		
-		//checks if aligted on destination
-		int lastIdx = this.stopInfoList.indexOf(stopInfoDestination);
-		if(lastIdx + 1 == this.stopInfoList.size())
+		//lista de passageiros que foram ateh destination
+		List<String> destinPassengers = getAlightedOnList(destination);
+		
+		for(String mac : originPassengers)
 		{
-			//final stop
-			List<String> destinPop = getMacList(stopInfoDestination.getStopId());	
-			for(String mac : orignPop)
+			if(destinPassengers.contains(mac))
 			{
-				if(destinPop.contains(mac))
-				{
-					sum++;
-				}
+				totalTrip++;
 			}
 		}
-		else
-		{
-			//checks the next of destination
-			StopInfo next = this.stopInfoList.get(lastIdx + 1); 
-			
-			List<String> destinPop = getMacList(stopInfoDestination.getStopId());	
-			List<String> nextPop = getMacList(next.getStopId());	
-			
-			for(String mac : orignPop)
-			{
-				if(destinPop.contains(mac) && !nextPop.contains(mac))
-				{
-					sum++;
-				}
-			}
-		}
-		StopInfo last = this.stopInfoList.get(lastIdx);
-		if(last != null)
-		{
-			
-		}
 		
-		return sum;
+		return totalTrip;
 	}
 
 
-	private List<String> getBoardingOnList(StopInfo stopInfoOrign) 
-	{
-		List<String> result = new ArrayList<>();
-		
-		//checks if its the first stop point
-		int orignIndex = this.stopInfoList.indexOf(stopInfoOrign);
-		if(orignIndex == 0)
-		{
-			result = getMacList(stopInfoOrign.getStopId());
-		}
-		else
-		{
-			//it is a intermediary stop point, checks the predecessor:
-			StopInfo predecessor = this.stopInfoList.get(orignIndex - 1);
-			List<String> predecessorMacList = getMacList(predecessor.getStopId());
-			List<String> orignMacList = getMacList(stopInfoOrign.getStopId());
-			for(String mac : this.deviceCalls.keySet())
-			{
-				if(orignMacList.contains(mac) && !predecessorMacList.contains(mac))
-				{
-					result.add(mac);
-				}
-			}
-		}
-
-		return result;
-	}
-
-
-	private List<String> getMacList(int stopId) 
+	/**
+	 * Returns a list of every passenger embarked on origin
+	 * @param orign
+	 * @return
+	 */
+	private List<String> getBoardingOnList(TripSegmentInfo origin) 
 	{
 		List<String> result = new ArrayList<>();
 		
 		for(String mac : this.deviceCalls.keySet())
 		{
-			List<CallInfo> callsList = this.deviceCalls.get(mac);
-			//boolean isAuthentic = true;
-			boolean found = false;
-			for(CallInfo callInfo: callsList)
+			if(getOriginSegmentId(mac) == origin.getTripSegmentId())
 			{
-				if(callInfo.getCurrentStopId() == stopId)
-				{
-					found = true;
-					/*if(callInfo.getOppMode() != BeaconDefaults.OPP_MODE_AUTHENTIC)
-					{
-						isAuthentic = false;
-						break;
-					}*/					
-				}
+				result.add(mac);
 			}
-			if(found /*&& isAuthentic*/)
+		}
+
+		return result;
+	}
+	
+	
+
+
+	/**
+	 * Returns a list of every passenger on board til this point
+	 * @param orign
+	 * @return
+	 */
+	private List<String> getAlightedOnList(TripSegmentInfo destin) 
+	{
+		List<String> result = new ArrayList<>();
+		
+		for(String mac : this.deviceCalls.keySet())
+		{
+			if(getDestinSegmentId(mac) == destin.getTripSegmentId())
 			{
 				result.add(mac);
 			}
@@ -415,46 +482,67 @@ public class Manager
 	}
 
 
+
 	public void printPerformanceReport()
 	{
 		System.out.println("-------------------------------------------------------------------------------------");
-		System.out.printf("%-20s \t %-20s \t %-20s \t %-20s \n", "Discovery AVG Time", "First conn AVG Time", "Connections AVG Time", "Total on Board");
 		
 		int totalOnBoard = 0;
 		long discoveryTimeSum = 0;
 		long firstConnTimeSum = 0;
-		long connectionAvgSum = 0;
+		long connectionAcceptanceTimeSum = 0;
+		int totalCall = 0;
+		
 		for(String mac : this.deviceCalls.keySet())
 		{
 			totalOnBoard++;
 			
-			List<CallInfo> callInfos = this.deviceCalls.get(mac);
+			CallHistoric callHistoric = this.deviceCalls.get(mac);
 			
-			CallInfo firstCall = callInfos.get(0);
-			
-			long discoveryTime = firstCall.getBeaconFoundTs().getTime() - firstCall.getStartDiscoveryTs().getTime();
+			long discoveryTime = callHistoric.getBeaconFoundTs().getTime() - callHistoric.getStartDiscoveryTs().getTime();
 			discoveryTimeSum =+ discoveryTime;
 			
-			long firstCallTime = firstCall.getFirstConnectionTs().getTime() - firstCall.getBeaconFoundTs().getTime();
+			long firstCallTime = callHistoric.getFirstConnectionAcceptanceTs().getTime() - callHistoric.getBeaconFoundTs().getTime();
+			
+			System.out.println(" FirstConnectionAcceptanceTs: " + callHistoric.getFirstConnectionAcceptanceTs().getTime() );
+			System.out.println(" BeaconFoundTs: " + callHistoric.getBeaconFoundTs().getTime() );
+			
 			firstConnTimeSum =+ firstCallTime;
 			
-			long connectionsTimeSum = 0;
-			int callSum = 0;
-			for(CallInfo callInfo : callInfos)
+			for(CallInfo callInfo : callHistoric.getCalls())
 			{
-				long connectionsTime = callInfo.getTimeStamp().getTime() - callInfo.getLastAcceptedConnectionTs().getTime();
-				connectionsTimeSum =+ connectionsTime;
-				callSum++;
+				totalCall++;
+				///verificar null em callInfo.getLastConnectionRequestTs()
+				long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
+				connectionAcceptanceTimeSum =+ connAcceptanceTime;
 			}
-			long connectionAvg = connectionsTimeSum / callSum;
-			connectionAvgSum =+ connectionAvg;
 		}
 
-		long discoveryTimeAvg = discoveryTimeSum/totalOnBoard;
-		long firstConnTimeAvg = firstConnTimeSum/totalOnBoard;
-		long connectionAvgAvg = connectionAvgSum/totalOnBoard;
+		long discoveryTimeAvg = 0;
+		long firstConnTimeAvg = 0;
+		long connectionAcceptanceTimeAvg = 0;
+
+		if(totalOnBoard > 0)
+		{
+			discoveryTimeAvg = discoveryTimeSum/totalOnBoard;
+			firstConnTimeAvg = firstConnTimeSum/totalOnBoard;
+		}
 		
-		System.out.printf("%-20s \t %-20s \t %-20s \t %-20s \n", discoveryTimeAvg, firstConnTimeAvg, connectionAvgAvg, totalOnBoard);
+		if(totalCall > 0)
+		{
+			connectionAcceptanceTimeAvg = connectionAcceptanceTimeSum/totalCall;			
+		}
+		System.out.println("Discovery avg time: " + discoveryTimeAvg + " ms");
+		System.out.println("First connection acceptance avg time: " + firstConnTimeAvg + " ms");
+		
+		System.out.println("Connection acceptance avg time: " + connectionAcceptanceTimeAvg + " ms");
+		System.out.println("Total of passengers:" +  totalOnBoard);
+		System.out.println("Total of calls:" +  totalCall);
 	}
 
+
+	public void setLineInfo(LineInfo lineInfo) 
+	{
+		this.lineInfo = lineInfo;
+	}
 }

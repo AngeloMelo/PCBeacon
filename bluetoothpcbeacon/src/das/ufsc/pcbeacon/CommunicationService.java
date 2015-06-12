@@ -31,6 +31,8 @@ public class CommunicationService
 	private WaitThread mServerThread;
 	private final Manager mHandler;
 	private Map<String, ReadWriteThread> pool;
+	
+	private boolean bluetoothReady = false;
 
 	
 	public CommunicationService(Manager handler) 
@@ -74,6 +76,12 @@ public class CommunicationService
 			this.pool.get(mac).cancel();
 		}
 	}
+	
+	public synchronized boolean isBluetoothReady()
+	{
+		return this.isBluetoothReady();
+	}
+	
 	
 	
 	public synchronized void startTransmission(StreamConnection connection) 
@@ -155,6 +163,8 @@ public class CommunicationService
 
 			// waiting for connection
 			System.out.println("waiting for connection...");
+			
+			bluetoothReady = true;
 			while(this.running)
 			{
 				try
@@ -240,6 +250,8 @@ public class CommunicationService
 	 
 	    public void cancel() 
 	    {
+	        try { mmInStream.close(); } catch (IOException e) { }
+	        try { mmOutStream.close(); } catch (IOException e) { }
 	        try 
 	        {
 	            streamConnection.close();
