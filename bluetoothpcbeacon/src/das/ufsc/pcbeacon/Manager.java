@@ -491,6 +491,11 @@ public class Manager
 		long discoveryTimeSum = 0;
 		long firstConnTimeSum = 0;
 		long connectionAcceptanceTimeSum = 0;
+		long connectionAcceptanceTimeMin = 1000000000;
+		long connectionAcceptanceTimeMax = 0;
+		long protocolTimeSum = 0;
+		long protocolTimeMin = 1000000000;
+		long protocolTimeMax = 0;
 		int totalCall = 0;
 		
 		for(String mac : this.deviceCalls.keySet())
@@ -504,9 +509,6 @@ public class Manager
 			
 			long firstCallTime = callHistoric.getFirstConnectionAcceptanceTs().getTime() - callHistoric.getBeaconFoundTs().getTime();
 			
-			System.out.println(" FirstConnectionAcceptanceTs: " + callHistoric.getFirstConnectionAcceptanceTs().getTime() );
-			System.out.println(" BeaconFoundTs: " + callHistoric.getBeaconFoundTs().getTime() );
-			
 			firstConnTimeSum =+ firstCallTime;
 			
 			for(CallInfo callInfo : callHistoric.getCalls())
@@ -515,13 +517,38 @@ public class Manager
 				///verificar null em callInfo.getLastConnectionRequestTs()
 				long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
 				connectionAcceptanceTimeSum =+ connAcceptanceTime;
+				
+				if(connAcceptanceTime < connectionAcceptanceTimeMin)
+				{
+					connectionAcceptanceTimeMin = connAcceptanceTime;
+				}
+				
+				if(connAcceptanceTime > connectionAcceptanceTimeMax)
+				{
+					connectionAcceptanceTimeMax = connAcceptanceTime;
+				}
+				
+				long protocolTime = callInfo.getLastAckSentTs().getTime() - callInfo.getLastConnectionAcceptanceTs().getTime();
+				protocolTimeSum += protocolTime;
+				
+				if(protocolTime < protocolTimeMin)
+				{
+					protocolTimeMin = protocolTime;
+				}
+				
+				if(protocolTime > protocolTimeMax)
+				{
+					protocolTimeMax = protocolTime;
+				}
+
 			}
 		}
 
 		long discoveryTimeAvg = 0;
 		long firstConnTimeAvg = 0;
 		long connectionAcceptanceTimeAvg = 0;
-
+		long protocolTimeAvg = 0;
+		
 		if(totalOnBoard > 0)
 		{
 			discoveryTimeAvg = discoveryTimeSum/totalOnBoard;
@@ -530,12 +557,15 @@ public class Manager
 		
 		if(totalCall > 0)
 		{
-			connectionAcceptanceTimeAvg = connectionAcceptanceTimeSum/totalCall;			
+			connectionAcceptanceTimeAvg = connectionAcceptanceTimeSum/totalCall;
+			protocolTimeAvg  = protocolTimeSum/totalCall;
 		}
+		
 		System.out.println("Discovery avg time: " + discoveryTimeAvg + " ms");
 		System.out.println("First connection acceptance avg time: " + firstConnTimeAvg + " ms");
 		
-		System.out.println("Connection acceptance avg time: " + connectionAcceptanceTimeAvg + " ms");
+		System.out.println("Connection acceptance time: " + connectionAcceptanceTimeAvg + " (avg) " + connectionAcceptanceTimeMin + " (min) " + connectionAcceptanceTimeMax + "(max)");
+		System.out.println("Protocol execution time:" +  protocolTimeAvg + " (avg) " + protocolTimeMin + " (min) " + protocolTimeMax + " (max)");
 		System.out.println("Total of passengers:" +  totalOnBoard);
 		System.out.println("Total of calls:" +  totalCall);
 	}
