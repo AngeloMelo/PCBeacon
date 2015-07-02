@@ -33,23 +33,31 @@ public class Main{
 
 		stopList.add(new TripSegmentInfo(12, "Morro da Carvoeira", "UFSC - CFH", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(13, "Stop on UFSC - CFH", "", stopTime, true));
-		
-		/*
-		stopList.add(new StopInfo(7, "", 35));
-		stopList.add(new StopInfo(8, "", 35));
-		stopList.add(new StopInfo(9, "UFSC - BU", 35));
-		stopList.add(new StopInfo(10, "", 6));
-		stopList.add(new StopInfo(11, "Praça Pida", 6));
-		stopList.add(new StopInfo(12, "Capitão Gourmet", 6));
-		stopList.add(new StopInfo(13, "Hospital Infantil", 6));
-		stopList.add(new StopInfo(14, "Beiramar Shopping", 6));
-		stopList.add(new StopInfo(15, "IFSC", 6));
-		stopList.add(new StopInfo(16, "ALESC", 6));
-		stopList.add(new StopInfo(17, "TICEN", 6));*/
+/*
+		stopList.add(new TripSegmentInfo(14, "UFSC - CFH", "UFSC - BU", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(15, "Stop on UFSC - BU", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(16, "UFSC - BU", "Captitao Gourmet", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(17, "Stop on Captitao Gourmet", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(18, "Captitao Gourmet", "Hospital Infantil", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(19, "Stop on Hospital Infantil", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(20, "Hospital Infantil", "Beiramar Shopping", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(21, "Stop on Beiramar Shopping", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(22, "Beiramar Shopping", "IFSC", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(23, "Stop on IFSC", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(24, "IFSC", "ALESC", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(25, "Stop on ALESC", "", stopTime, true));
+
+		stopList.add(new TripSegmentInfo(26, "ALESC", "TICEN", tripSegmentTime, false));
+		stopList.add(new TripSegmentInfo(27, "Stop on TICEN", "", stopTime, true));
+ */
 		
 		LineInfo lineInfo = new LineInfo(513, "Volta ao Morro Carvoeira Sul", stopList);
 		LineEmulator lineEmulator = new LineEmulator(lineInfo, manager);
-		
 		manager.start();
 		lineEmulator.start();
 	}

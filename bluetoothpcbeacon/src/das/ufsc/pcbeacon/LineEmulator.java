@@ -36,9 +36,7 @@ public class LineEmulator extends Thread
 		
 		this.managerRef.stop();
 		this.managerRef.removeDubious();
-		this.managerRef.printTotalBySegmentsReport();
-		this.managerRef.printODReport();
-		this.managerRef.printPerformanceReport();
+		this.managerRef.printReports();
 	}
 }
 
