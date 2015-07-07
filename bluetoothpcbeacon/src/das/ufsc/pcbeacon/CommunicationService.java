@@ -15,9 +15,6 @@ import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 import javax.microedition.io.StreamConnectionNotifier;
 
-import com.intel.bluetooth.BlueCoveImpl;
-import com.intel.bluetooth.BluetoothConsts;
-
 
 
 public class CommunicationService
