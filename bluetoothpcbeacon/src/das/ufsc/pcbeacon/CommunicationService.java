@@ -1,6 +1,5 @@
 package das.ufsc.pcbeacon;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +14,9 @@ import javax.bluetooth.UUID;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 import javax.microedition.io.StreamConnectionNotifier;
+
+import com.intel.bluetooth.BlueCoveImpl;
+import com.intel.bluetooth.BluetoothConsts;
 
 
 
@@ -31,10 +33,7 @@ public class CommunicationService
 	private WaitThread mServerThread;
 	private final Manager mHandler;
 	private Map<String, ReadWriteThread> pool;
-	
-	private boolean bluetoothReady = false;
-
-	
+		
 	public CommunicationService(Manager handler) 
 	{
         mHandler = handler;
@@ -44,6 +43,12 @@ public class CommunicationService
 	
 	public synchronized void start() 
 	{
+		if(!LocalDevice.isPowerOn())
+		{
+			System.out.println("Bluetooth is not on");
+			return;
+		}
+		
         // Start the thread to listen on a BluetoothServerSocket
         if (mServerThread == null) 
         {
@@ -77,11 +82,6 @@ public class CommunicationService
 		}
 	}
 	
-	public synchronized boolean isBluetoothReady()
-	{
-		return this.isBluetoothReady();
-	}
-	
 	
 	
 	public synchronized void startTransmission(StreamConnection connection) 
@@ -106,10 +106,11 @@ public class CommunicationService
 	
 	public void stopComunicationThread(String mac) 
 	{
+		mac = mac.replace(":", "");
 		ReadWriteThread mReadWriteThread = this.pool.get(mac);
 		if(mReadWriteThread != null) mReadWriteThread.cancel(); 
 		mReadWriteThread = null;
-		
+
 		this.pool.remove(mac);
 	}
     
@@ -120,7 +121,11 @@ public class CommunicationService
     	mReadWriteThread.write(msg.getBytes());
     }
 	
-	
+	/**
+	 * 
+	 * @author angelo
+	 *
+	 */
 	private class WaitThread extends Thread
 	{
 		private volatile boolean running = true;
@@ -143,8 +148,12 @@ public class CommunicationService
 			try 
 			{
 				local = LocalDevice.getLocalDevice();
+				
+				// setup the device to be discoverable by General/Unlimited Inquiry Access Code. 
+				//All remote devices will be able to find the beacon
 				local.setDiscoverable(DiscoveryAgent.GIAC);
 
+				//setup the url of beacon service
 				String url = "btspp://localhost:" + uuid.toString() + ";name=" + NAME;
 				notifier = (StreamConnectionNotifier)Connector.open(url);
 			} 
@@ -162,15 +171,15 @@ public class CommunicationService
 			}
 
 			// waiting for connection
-			System.out.println("waiting for connection...");
-			
-			bluetoothReady = true;
 			while(this.running)
 			{
 				try
 				{
+					//waits for incoming connections 
+					//acceptAndOpen will block the server until a connection request is received
 					connection = notifier.acceptAndOpen();
 
+					//monitor connected, start transmission thread
 					startTransmission(connection);
 
 				} 
@@ -214,30 +223,26 @@ public class CommunicationService
 	 
 	    public void run() 
 	    {
+	    	// buffer store for the stream
+	        byte[] buffer = new byte[1024];  
+
 	        // Keep listening to the InputStream until canceled
 	        while (this.running) 
 	        {
 	            try 
 	            {
-	                // Read from the InputStream
-	            	ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-
-	            	int nRead;
-	            	byte[] data = new byte[1024];
-
-	            	while ((nRead = mmInStream.read(data, 0, data.length)) != -1) 
-	            	{
-	            		buffer.write(data, 0, nRead);
-	            	}
-
-	            	buffer.flush();
-	            	
-	                String cmd = new String(buffer.toByteArray(), "UTF-8");
-
+	            	//TODO rebuild method
+	            	// Read from the InputStream
+	                mmInStream.read(buffer);
+	                
+	                String cmd = new String(buffer, "UTF-8");
+	                
 	                mHandler.handleMessage(MSG_TYPE_MESSAGE_READ, cmd);
 	            } 
 	            catch (IOException e) 
 	            {
+	            	//stop connection
+	            	stopComunicationThread(remoteAddress);
 	                break;
 	            }
 	        }
@@ -250,13 +255,32 @@ public class CommunicationService
 	 
 	    public void cancel() 
 	    {
-	        try { mmInStream.close(); } catch (IOException e) { }
-	        try { mmOutStream.close(); } catch (IOException e) { }
+	        try 
+	        { 
+	        	mmInStream.close(); 
+	        } 
+	        catch (IOException e) 
+	        { 
+	        	e.printStackTrace();
+	        }
+	        
+	        try 
+	        { 
+	        	mmOutStream.close(); 
+	        } 
+	        catch (IOException e) 
+	        { 
+	        	e.printStackTrace();
+	        }
+	        
 	        try 
 	        {
 	            streamConnection.close();
 	        } 
-	        catch (IOException e) { }
+	        catch (IOException e) 
+	        { 
+	        	e.printStackTrace();
+	        }
 	        finally
 	        {
 	        	this.running = false;
