@@ -13,7 +13,7 @@ public class Main{
 		List<TripSegmentInfo> stopList = new ArrayList<>();
 		
 		int stopTime = 10;
-		int tripSegmentTime = 35;
+		int tripSegmentTime = 50;
 		
 		stopList.add(new TripSegmentInfo(1, "TICEN", "", stopTime, true));
 		stopList.add(new TripSegmentInfo(2, "TICEN", "Prainha", tripSegmentTime, false));
@@ -21,7 +21,7 @@ public class Main{
 		
 		stopList.add(new TripSegmentInfo(4, "Prainha", "Penhasco", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(5, "Stop on Penhasco", "", stopTime, true));
-		
+			
 		stopList.add(new TripSegmentInfo(6, "Penhasco", "Jose Mendes", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(7, "Stop on Jose Mendes", "", stopTime, true));
 		
@@ -33,7 +33,7 @@ public class Main{
 
 		stopList.add(new TripSegmentInfo(12, "Morro da Carvoeira", "UFSC - CFH", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(13, "Stop on UFSC - CFH", "", stopTime, true));
-/*
+
 		stopList.add(new TripSegmentInfo(14, "UFSC - CFH", "UFSC - BU", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(15, "Stop on UFSC - BU", "", stopTime, true));
 
@@ -54,7 +54,7 @@ public class Main{
 
 		stopList.add(new TripSegmentInfo(26, "ALESC", "TICEN", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(27, "Stop on TICEN", "", stopTime, true));
- */
+
 		
 		LineInfo lineInfo = new LineInfo(513, "Volta ao Morro Carvoeira Sul", stopList);
 		LineEmulator lineEmulator = new LineEmulator(lineInfo, manager);
