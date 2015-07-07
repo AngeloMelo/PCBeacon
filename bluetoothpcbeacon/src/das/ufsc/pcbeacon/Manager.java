@@ -50,12 +50,6 @@ public class Manager
 	}
 	
 	
-	public synchronized boolean isBluetoothReady()
-	{
-		return this.communicationService.isBluetoothReady();
-	}
-
-	
 	public synchronized void handleMessage(int type, String msg) 
 	{
 		switch(type)
@@ -86,7 +80,7 @@ public class Manager
 
 		try 
 		{
-			int secs = new Random().nextInt(5) + 5;
+			int secs = getTicTimeMin() + new Random().nextInt(getTicTimeOffset());
 			
 			int lineId = this.lineInfo.getLineId();
 			String lineName = this.lineInfo.getLineNm();
@@ -104,6 +98,18 @@ public class Manager
 			showToast(e.getMessage());
 			e.printStackTrace();
 		}
+	}
+
+
+	private int getTicTimeMin() 
+	{
+		return 10;
+	}
+
+
+	private int getTicTimeOffset() 
+	{
+		return 5;
 	}
 
 
@@ -164,6 +170,8 @@ public class Manager
 			{				
 				String remoteMac = json.getString(BeaconDefaults.MAC_KEY);
 				
+				remoteMac = remoteMac.replace(":", "");
+				
 				//register only if not on a stop
 				if(!this.currentTripSegmentInfo.isStop())
 				{
@@ -180,13 +188,13 @@ public class Manager
 					addHistoryEntry(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
 					validateHistoric(remoteMac, oppMode);
 				}
-				
+				this.communicationService.sendMessage(remoteMac, "{TIC:-1}");
 				this.communicationService.stopComunicationThread(remoteMac);
 			}		
 		}
 		catch(Exception e)
 		{
-			
+			e.printStackTrace();
 		}
 	}
 
