@@ -221,20 +221,27 @@ public class CommunicationService
 	    public void run() 
 	    {
 	    	// buffer store for the stream
-	        byte[] buffer = new byte[1024];  
+	        byte[] buffer;  
 
 	        // Keep listening to the InputStream until canceled
 	        while (this.running) 
 	        {
 	            try 
 	            {
-	            	//TODO rebuild method
-	            	// Read from the InputStream
-	                mmInStream.read(buffer);
-	                
-	                String cmd = new String(buffer, "UTF-8");
-	                
-	                mHandler.handleMessage(MSG_TYPE_MESSAGE_READ, cmd);
+	            	// count the available bytes form the input stream
+	            	int count = mmInStream.available();
+	            	
+	            	if(count > 0)
+	            	{	            		
+	            		buffer = new byte[count];
+	            		
+	            		// Read from the InputStream
+	            		mmInStream.read(buffer);
+	            		
+	            		String cmd = new String(buffer, "UTF-8");
+	            		
+	            		mHandler.handleMessage(MSG_TYPE_MESSAGE_READ, cmd);
+	            	}
 	            } 
 	            catch (IOException e) 
 	            {
