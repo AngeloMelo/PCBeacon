@@ -20,8 +20,13 @@ public class LineEmulator extends Thread
 		
 		this.managerRef.setLineInfo(this.lineInfo);
 		
+		int cont = 2;
 		for(TripSegmentInfo tripSegmentInfo : this.lineInfo.getTripSegmentList())
 		{
+			if((cont++) == this.lineInfo.getTripSegmentList().size())
+			{
+				tripSegmentInfo.setLast(true);
+			}
 			this.managerRef.setCurrentTripSegmentInfo(tripSegmentInfo);
 			
 			try 
@@ -86,6 +91,7 @@ class TripSegmentInfo
 	private int tripSegmentTime;
 	private Date tripSegmentStartTs;
 	private boolean stop;
+	private boolean last;
 	
 	public TripSegmentInfo()
 	{
@@ -101,6 +107,7 @@ class TripSegmentInfo
 		this.tripSegmentDestination = tripSegmentDestination;
 		this.tripSegmentTime = tripSegmentTime;
 		this.stop = stop;
+		this.last = false;
 	}
 
 
@@ -108,6 +115,10 @@ class TripSegmentInfo
 		return stop;
 	}
 
+	public boolean isLast() {
+		return last;
+	}
+	
 	public int getTripSegmentId() {
 		return tripSegmentId;
 	}
@@ -137,6 +148,10 @@ class TripSegmentInfo
 		this.stop = stop;
 	}
 
+	public void setLast(boolean last) {
+		this.last = last;
+	}
+	
 	public Date getTripSegmentStartTs() {
 		return tripSegmentStartTs;
 	}
