@@ -3,6 +3,7 @@ package das.ufsc.pcbeacon;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,6 +15,10 @@ import javax.bluetooth.UUID;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 import javax.microedition.io.StreamConnectionNotifier;
+
+import org.json.JSONObject;
+
+import das.ufsc.pcbeacon.utils.BeaconDefaults;
 
 
 
@@ -38,7 +43,7 @@ public class CommunicationService
     }
 
 	
-	public synchronized void start() 
+	public void start() 
 	{
 		if(!LocalDevice.isPowerOn())
 		{
@@ -53,19 +58,10 @@ public class CommunicationService
             mServerThread.start();
         }
     }
+
 	
 	
-	public synchronized void restartAcceptThread()
-	{
-		// Start the thread to listen on a BluetoothServerSocket
-		if (mServerThread != null) { mServerThread = null;}
-		
-        mServerThread = new WaitThread();
-        mServerThread.start();
-	}
-	
-	
-	public synchronized void stop()
+	public void stop()
 	{
 		if (mServerThread != null) 
 		{ 
@@ -80,28 +76,7 @@ public class CommunicationService
 	}
 	
 	
-	
-	public synchronized void startTransmission(StreamConnection connection) 
-    {        
-		try 
-		{
-			ReadWriteThread mReadWriteThread = new ReadWriteThread(connection);
-			mReadWriteThread.start();
-        
-			RemoteDevice dev = RemoteDevice.getRemoteDevice(connection);
-			String remoteAddress = dev.getBluetoothAddress();
-			
-			this.pool.put(remoteAddress, mReadWriteThread);
-			mHandler.handleMessage(MSG_TYPE_CONNECTION_ACCEPTED, remoteAddress);
-		} 
-		catch (IOException e) 
-		{
-			e.printStackTrace();
-		} 
-    }    
-
-	
-	public void stopComunicationThread(String mac) 
+	public synchronized void stopComunicationThread(String mac) 
 	{
 		mac = mac.replace(":", "");
 		ReadWriteThread mReadWriteThread = this.pool.get(mac);
@@ -118,6 +93,40 @@ public class CommunicationService
     	mReadWriteThread.write(msg.getBytes());
     }
 	
+	
+
+	//private synchronized void messageReceived(String msg) throws IOException
+    //{
+	//	mHandler.handleMessage(MSG_TYPE_MESSAGE_READ, msg);
+    //}
+	
+	
+	private synchronized void addRWThread(String remoteAddress, ReadWriteThread mReadWriteThread) 
+	{
+		this.pool.put(remoteAddress, mReadWriteThread);
+	}
+	
+	
+	private synchronized String getTicMessage(String remoteAddress) 
+	{
+		return this.mHandler.getTicMessage(remoteAddress);
+	}
+
+	
+	public synchronized boolean onStop() 
+	{
+		return this.mHandler.onStop();
+	}
+
+
+	public synchronized void registerCall(String remoteMac, int oppMode,
+			Date startDiscoveryTs, Date beaconFoundTs,
+			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs,
+			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs) 
+	{
+		this.mHandler.registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+	}
+	
 	/**
 	 * 
 	 * @author angelo
@@ -127,7 +136,7 @@ public class CommunicationService
 	{
 		private volatile boolean running = true;
 
-		public void terminate() 
+		public synchronized void terminate() 
 		{
 			this.running = false;
 		}
@@ -146,7 +155,7 @@ public class CommunicationService
 			{
 				local = LocalDevice.getLocalDevice();
 				
-				// setup the device to be discoverable by General/Unlimited Inquiry Access Code. 
+				// lets the device be discoverable by General/Unlimited Inquiry Access Code. 
 				//All remote devices will be able to find the beacon
 				local.setDiscoverable(DiscoveryAgent.GIAC);
 
@@ -177,7 +186,7 @@ public class CommunicationService
 					connection = notifier.acceptAndOpen();
 
 					//monitor connected, start transmission thread
-					startTransmission(connection);
+					new SetUpTransmissionThread(connection).start();
 
 				} 
 				catch (Exception e) 
@@ -198,7 +207,7 @@ public class CommunicationService
 	    private volatile boolean running = true;
 	    private String remoteAddress;
 	 
-	    public ReadWriteThread(StreamConnection st) 
+	    public ReadWriteThread(StreamConnection st, String remoteAddress) 
 	    {
 	        streamConnection = st;
 	        InputStream tmpIn = null;
@@ -207,8 +216,7 @@ public class CommunicationService
 	        // Get the input and output streams, using temp objects because member streams are final
 	        try 
 	        {
-	        	RemoteDevice dev = RemoteDevice.getRemoteDevice(st);
-	        	this.remoteAddress = dev.getBluetoothAddress();
+	        	this.remoteAddress = remoteAddress;
 	            tmpIn = streamConnection.openInputStream();
 	            tmpOut = streamConnection.openOutputStream();
 	        } 
@@ -221,7 +229,7 @@ public class CommunicationService
 	    public void run() 
 	    {
 	    	// buffer store for the stream
-	        byte[] buffer;  
+	        byte[] buffer = new byte[2048];  
 
 	        // Keep listening to the InputStream until canceled
 	        while (this.running) 
@@ -229,19 +237,22 @@ public class CommunicationService
 	            try 
 	            {
 	            	// count the available bytes form the input stream
-	            	int count = mmInStream.available();
+	            	//int count = mmInStream.available();
 	            	
-	            	if(count > 0)
-	            	{	            		
-	            		buffer = new byte[count];
+	            	//if(count > 0)
+	            	//{	            		
+	            		//buffer = new byte[count];
 	            		
 	            		// Read from the InputStream
 	            		mmInStream.read(buffer);
 	            		
-	            		String cmd = new String(buffer, "UTF-8");
-	            		
-	            		mHandler.handleMessage(MSG_TYPE_MESSAGE_READ, cmd);
-	            	}
+	            		String msg = new String(buffer, "UTF-8");
+	            		if(msg.length() > 0)
+	            		{
+	            			new CallHandlerThread(msg, this.remoteAddress).start();
+	            		}
+	            		//messageReceived(msg);
+	            	//}
 	            } 
 	            catch (IOException e) 
 	            {
@@ -290,5 +301,89 @@ public class CommunicationService
 	        	this.running = false;
 	        }
 	    }
+	}
+	
+	
+	private class SetUpTransmissionThread extends Thread 
+	{
+		private StreamConnection connection;
+
+		public SetUpTransmissionThread(StreamConnection connection) 
+		{
+			this.connection = connection;
+		}
+
+		public void run()
+		{
+			try 
+			{
+				RemoteDevice dev = RemoteDevice.getRemoteDevice(connection);
+				String remoteAddress = dev.getBluetoothAddress();
+
+				ReadWriteThread mReadWriteThread = new ReadWriteThread(connection, remoteAddress);
+				mReadWriteThread.start();
+				
+				addRWThread(remoteAddress, mReadWriteThread);
+				
+				String msgTic = getTicMessage(remoteAddress);
+				sendMessage(remoteAddress, msgTic);
+			} 
+			catch (IOException e) 
+			{
+				e.printStackTrace();
+			} 
+		}
+	}
+	
+	
+	private class CallHandlerThread extends Thread
+	{
+		private String msg;
+		private String remoteAddress;
+
+		public CallHandlerThread(String msg, String remoteAddress) 
+		{
+			this.msg = msg;
+			this.remoteAddress = remoteAddress;
+		}
+
+		public void run()
+		{
+			try
+			{
+				if(!msg.startsWith("{")) return;
+				
+				JSONObject json = new JSONObject(msg);
+				if(json.has(BeaconDefaults.ACK_KEY))
+				{				
+					String remoteMac = json.getString(BeaconDefaults.MAC_KEY);
+					
+					remoteMac = remoteMac.replace(":", "");
+					
+					//register only if not on a stop
+					if(!onStop())
+					{
+						//get performance infos
+						Date startDiscoveryTs = BeaconDefaults.getStartDiscoveryTs(json);
+						Date beaconFoundTs = BeaconDefaults.getBeaconFoundTs(json);
+						Date firstConnectionAcceptanceTs = BeaconDefaults.getFirstConnectionAcceptanceTs(json);
+						Date lastConnectionRequestTs = BeaconDefaults.getLastConnectionRequestTs(json);
+						Date lastConnectionAcceptanceTs = BeaconDefaults.getLastConnectionAcceptanceTs(json);
+						Date lastTicTs = BeaconDefaults.getLastTicReceivedTs(json);
+						Date lastAckSentTs = BeaconDefaults.getLastAckSentTs(json);
+						
+						int oppMode = BeaconDefaults.getOppMode(msg);
+						
+						registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+					}
+					//sendMessage(remoteMac, "{TIC:-1}");
+					stopComunicationThread(remoteMac);
+				}		
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
 	}
 }
