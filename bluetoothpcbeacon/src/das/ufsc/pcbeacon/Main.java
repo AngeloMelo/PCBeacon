@@ -9,11 +9,13 @@ public class Main{
 	public static void main(String[] args) 
 	{
 		Manager manager = new Manager();
-
+		manager.setTicTimeMin(13);
+		manager.setTicTimeOffset(7);
+		
 		List<TripSegmentInfo> stopList = new ArrayList<>();
 		
 		int stopTime = 10;
-		int tripSegmentTime = 50;
+		int tripSegmentTime = 45;
 		
 		stopList.add(new TripSegmentInfo(1, "TICEN", "", stopTime, true));
 		stopList.add(new TripSegmentInfo(2, "TICEN", "Prainha", tripSegmentTime, false));
@@ -27,7 +29,7 @@ public class Main{
 		
 		stopList.add(new TripSegmentInfo(8, "Jose Mendes", "Saco dos Limoes", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(9, "Stop on Saco dos Limoes", "", stopTime, true));
-		
+/*		
 		stopList.add(new TripSegmentInfo(10, "Saco dos Limoes", "Morro da Carvoeira", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(11, "Stop on Morro da Carvoeira", "", stopTime, true));
 
@@ -54,7 +56,7 @@ public class Main{
 
 		stopList.add(new TripSegmentInfo(26, "ALESC", "TICEN", tripSegmentTime, false));
 		stopList.add(new TripSegmentInfo(27, "Stop on TICEN", "", stopTime, true));
-
+		*/
 		
 		LineInfo lineInfo = new LineInfo(513, "Volta ao Morro Carvoeira Sul", stopList);
 		LineEmulator lineEmulator = new LineEmulator(lineInfo, manager);
