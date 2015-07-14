@@ -21,6 +21,8 @@ public class Manager
 	private List<TripSegmentInfo> tripSegmentList;
 	private Map<String, CallHistoric> deviceCalls;
 	private LineInfo lineInfo;
+	private int ticTimeMin;
+	private int ticTimeOffset;
 	
 	public Manager()
 	{
@@ -34,7 +36,19 @@ public class Manager
 		//historic initialization, maps a mac address to a list of calls
 		this.deviceCalls = new HashMap<String, CallHistoric>();
 	}
-	
+
+	public void setTicTimeMin(int value){ this.ticTimeMin = value; };
+	private int getTicTimeMin() 
+	{
+		return this.ticTimeMin;
+	}
+
+	public void setTicTimeOffset(int value){ this.ticTimeOffset = value; };
+	private int getTicTimeOffset() 
+	{
+		return this.ticTimeOffset;
+	}
+
 	
 	public void start() 
 	{
@@ -50,7 +64,7 @@ public class Manager
 	}
 	
 	
-	public synchronized void handleMessage(int type, String msg) 
+	private synchronized void handleMessage(int type, String msg) 
 	{
 		switch(type)
 		{
@@ -72,6 +86,25 @@ public class Manager
 		}
 	}
 
+	
+	public String getTicMessage(String remoteMac)
+	{
+		int secs = getTicTimeMin() + new Random().nextInt(getTicTimeOffset());
+		if(this.currentTripSegmentInfo.isLast())
+		{
+			secs = -1;
+		}
+		
+		int lineId = this.lineInfo.getLineId();
+		String lineName = this.lineInfo.getLineNm();
+		String lastStop = "Next stop: " + this.currentTripSegmentInfo.getTripSegmentDestination();
+		if(this.currentTripSegmentInfo.isStop())
+		{
+			lastStop = this.currentTripSegmentInfo.getTripSegmentOrign();
+		}
+		return BeaconDefaults.getTicJson(secs, lineId, lineName, lastStop);
+	}
+	
 	
 	private void sendTic(String msgRead) 
 	{
@@ -99,19 +132,6 @@ public class Manager
 			e.printStackTrace();
 		}
 	}
-
-
-	private int getTicTimeMin() 
-	{
-		return 10;
-	}
-
-
-	private int getTicTimeOffset() 
-	{
-		return 5;
-	}
-
 
 	private void addHistoryEntry(String mac, int oppMode,
 			Date startDiscoveryTs, Date beaconFoundTs,
@@ -323,5 +343,21 @@ public class Manager
 		printer.printTotalBySegmentsReport();
 		printer.printODReport();
 		printer.printPerformanceReport();
+	}
+
+
+	public boolean onStop() 
+	{
+		return this.currentTripSegmentInfo.isStop();
+	}
+	
+	
+	public void registerCall(String remoteMac, int oppMode,
+			Date startDiscoveryTs, Date beaconFoundTs,
+			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs,
+			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs)
+	{
+		addHistoryEntry(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+		validateHistoric(remoteMac, oppMode);
 	}
 }
