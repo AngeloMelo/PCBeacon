@@ -90,7 +90,10 @@ public class CommunicationService
 	public synchronized void sendMessage(String targetMac, String msg) throws IOException
     {
 		ReadWriteThread mReadWriteThread = this.pool.get(targetMac);
-    	mReadWriteThread.write(msg.getBytes());
+		if(mReadWriteThread != null)
+    	{
+			mReadWriteThread.write(msg.getBytes());
+    	}
     }
 	
 	
@@ -110,6 +113,12 @@ public class CommunicationService
 	private synchronized String getTicMessage(String remoteAddress) 
 	{
 		return this.mHandler.getTicMessage(remoteAddress);
+	}
+
+	private synchronized long getDelay() 
+	{
+		int delay = this.mHandler.getDelay();
+		return new Long(delay * 1000);
 	}
 
 	
@@ -147,6 +156,7 @@ public class CommunicationService
 			// retrieve the local Bluetooth device object
 			LocalDevice local = null;
 
+			//L2CAPConnectionNotifier 
 			StreamConnectionNotifier notifier;
 			StreamConnection connection = null;
 
@@ -249,6 +259,7 @@ public class CommunicationService
 	            		String msg = new String(buffer, "UTF-8");
 	            		if(msg.length() > 0)
 	            		{
+	            			this.running = false;
 	            			new CallHandlerThread(msg, this.remoteAddress).start();
 	            		}
 	            		//messageReceived(msg);
@@ -320,6 +331,15 @@ public class CommunicationService
 				RemoteDevice dev = RemoteDevice.getRemoteDevice(connection);
 				String remoteAddress = dev.getBluetoothAddress();
 
+				try 
+				{
+					sleep(getDelay());
+				} 
+				catch (InterruptedException e) 
+				{
+					e.printStackTrace();
+				}
+				
 				ReadWriteThread mReadWriteThread = new ReadWriteThread(connection, remoteAddress);
 				mReadWriteThread.start();
 				
@@ -376,7 +396,7 @@ public class CommunicationService
 						
 						registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
 					}
-					//sendMessage(remoteMac, "{TIC:-1}");
+					sendMessage(remoteMac, "{" + BeaconDefaults.TIC_KEY + ":" + BeaconDefaults.INT_CLOSE_CONNECTION + "}");
 					stopComunicationThread(remoteMac);
 				}		
 			}
