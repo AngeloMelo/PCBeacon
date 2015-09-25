@@ -1,6 +1,5 @@
 package das.ufsc.pcbeacon;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -9,8 +8,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import org.json.JSONObject;
 
 import das.ufsc.pcbeacon.utils.BeaconDefaults;
 
@@ -23,11 +20,14 @@ public class Manager
 	private LineInfo lineInfo;
 	private int ticTimeMin;
 	private int ticTimeOffset;
+	private int threadDelay;
+	private Main gui;
 	
-	public Manager()
+	public Manager(Main gui)
 	{
 		super();
-			
+		
+		this.gui = gui;
 		this.tripSegmentList = new LinkedList<>();
 		
 		//initializes the threads for connections
@@ -37,17 +37,17 @@ public class Manager
 		this.deviceCalls = new HashMap<String, CallHistoric>();
 	}
 
+	
 	public void setTicTimeMin(int value){ this.ticTimeMin = value; };
-	private int getTicTimeMin() 
-	{
-		return this.ticTimeMin;
-	}
+	private int getTicTimeMin() { return this.ticTimeMin; }
+	
+
+	public void setDelay(int delay) { this.threadDelay = delay; }
+	public int getDelay() { return this.threadDelay; }
+
 
 	public void setTicTimeOffset(int value){ this.ticTimeOffset = value; };
-	private int getTicTimeOffset() 
-	{
-		return this.ticTimeOffset;
-	}
+	private int getTicTimeOffset() { return this.ticTimeOffset; }
 
 	
 	public void start() 
@@ -63,7 +63,7 @@ public class Manager
 		this.communicationService.stop();
 	}
 	
-	
+	/*
 	private synchronized void handleMessage(int type, String msg) 
 	{
 		switch(type)
@@ -84,7 +84,7 @@ public class Manager
 			break;
 		}
 		}
-	}
+	}*/
 
 	
 	public String getTicMessage(String remoteMac)
@@ -92,7 +92,7 @@ public class Manager
 		int secs = getTicTimeMin() + new Random().nextInt(getTicTimeOffset());
 		if(this.currentTripSegmentInfo.isLast())
 		{
-			secs = -1;
+			secs = BeaconDefaults.INT_NO_RECALL;
 		}
 		
 		int lineId = this.lineInfo.getLineId();
@@ -105,7 +105,7 @@ public class Manager
 		return BeaconDefaults.getTicJson(secs, lineId, lineName, lastStop);
 	}
 	
-	
+	/*
 	private void sendTic(String msgRead) 
 	{
 		String mac = msgRead;
@@ -131,7 +131,7 @@ public class Manager
 			showToast(e.getMessage());
 			e.printStackTrace();
 		}
-	}
+	}*/
 
 	private void addHistoryEntry(String mac, int oppMode,
 			Date startDiscoveryTs, Date beaconFoundTs,
@@ -172,6 +172,7 @@ public class Manager
 			this.deviceCalls.put(mac, callHistoric);
 		}
 		System.out.println("Total current (a/d): " + getTotalOnBoard() + "/" + getTotalDubious());
+		gui.printTotalOnBoard(" " + getTotalOnBoard() + " (" + getTotalDubious() + " dubious)");
 	}
 
 
@@ -179,9 +180,10 @@ public class Manager
 	 * receives a message on format {MAC:'mac',OPP_MODE:0, ack:true}
 	 * @param msgRead
 	 */
+	/*
 	private void readAck(String msgRead) 
 	{	
-		//System.out.println("onReadAck: [" +msgRead +"]");
+		//gui.println("onReadAck: [" +msgRead +"]");
 		
 		try
 		{
@@ -217,7 +219,7 @@ public class Manager
 			e.printStackTrace();
 		}
 	}
-
+*/
 
 	private void validateHistoric(String remoteMac, int oppMode) 
 	{
@@ -259,12 +261,6 @@ public class Manager
 	}
 
 
-	private void showToast(String string) 
-	{
-		System.out.println(string);
-	}
-
-
 	public synchronized void setCurrentTripSegmentInfo(TripSegmentInfo tripSegmentInfo) 
 	{
 		this.currentTripSegmentInfo = tripSegmentInfo;
@@ -276,12 +272,17 @@ public class Manager
 		{
 			System.out.print("\t");
 			System.out.println(this.currentTripSegmentInfo.getTripSegmentOrign() +"(" + this.currentTripSegmentInfo.getTripSegmentId() + ") at " + stopTs);
+			gui.printStop(this.currentTripSegmentInfo.getTripSegmentOrign());
 		}
 		else
 		{
 			this.tripSegmentList.add(this.currentTripSegmentInfo);
 			System.out.println("Next stop: " + this.currentTripSegmentInfo.getTripSegmentDestination() +"(" + this.currentTripSegmentInfo.getTripSegmentId() + ") at " + stopTs);
+			gui.printLocation(" going to " + this.currentTripSegmentInfo.getTripSegmentDestination());
+			//System.out.print("Num of threads current: ");
+			//Thread.currentThread().getThreadGroup().list();
 		}
+		gui.printTotalOnBoard("0");
 	}
 
 	
@@ -343,6 +344,9 @@ public class Manager
 		printer.printTotalBySegmentsReport();
 		printer.printODReport();
 		printer.printPerformanceReport();
+		
+		printer.writeDiscoveryReport();
+		printer.writeCallsReport();
 	}
 
 
