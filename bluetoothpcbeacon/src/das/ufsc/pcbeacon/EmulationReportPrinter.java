@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,42 +54,31 @@ public class EmulationReportPrinter
 		
 		System.out.println("-------------------------------------------------------------------------------------");
 		
-		String fileName = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-		try (Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("C:\\Dados\\" + fileName + ".csv"), "utf-8"))) 
-		{
 		    
-			for(String mac : deviceCalls.keySet())
-			{
-				totalOnBoard++;
-				
-				CallHistoric callHistoric = deviceCalls.get(mac);
-				
-				long discoveryTime = callHistoric.getBeaconFoundTs().getTime() - callHistoric.getStartDiscoveryTs().getTime();
-				discoveryTimes.add(discoveryTime);
-				
-				long firstCallTime = callHistoric.getFirstConnectionAcceptanceTs().getTime() - callHistoric.getBeaconFoundTs().getTime();			
-				firstConnTimes.add(firstCallTime);
-				
-				for(CallInfo callInfo : callHistoric.getCalls())
-				{
-					totalCall++;
-	
-					long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
-					connectionAcceptanceTimes.add(connAcceptanceTime);
-					
-					long protocolTime = callInfo.getLastAckSentTs().getTime() - callInfo.getLastConnectionAcceptanceTs().getTime();
-					protocolTimes.add(protocolTime);
-					
-					//write data to file
-					writer.write(discoveryTime + "," + firstCallTime + "," + connAcceptanceTime + "," + protocolTime + "\n");
-				}
-			}
-		
-		}
-		catch (IOException ex) 
+		for(String mac : deviceCalls.keySet())
 		{
-		    ex.printStackTrace();
-		} 
+			totalOnBoard++;
+			
+			CallHistoric callHistoric = deviceCalls.get(mac);
+			
+			long discoveryTime = callHistoric.getBeaconFoundTs().getTime() - callHistoric.getStartDiscoveryTs().getTime();
+			discoveryTimes.add(discoveryTime);
+			
+			long firstCallTime = callHistoric.getFirstConnectionAcceptanceTs().getTime() - callHistoric.getBeaconFoundTs().getTime();			
+			firstConnTimes.add(firstCallTime);
+			
+			for(CallInfo callInfo : callHistoric.getCalls())
+			{
+				totalCall++;
+
+				long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
+				connectionAcceptanceTimes.add(connAcceptanceTime);
+				
+				long protocolTime = callInfo.getLastAckSentTs().getTime() - callInfo.getLastConnectionAcceptanceTs().getTime();
+				protocolTimes.add(protocolTime);
+			}
+		}
+		
 
 		DataRank discoveryDataRank = new DataRank(discoveryTimes);
 		DataRank firstConnDataRank = new DataRank(firstConnTimes);
@@ -103,6 +93,64 @@ public class EmulationReportPrinter
 		System.out.println("Total of calls:" +  totalCall);
 	}
 	
+	public void writeCallsReport()
+	{
+		String fileName = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+		fileName = fileName + "_calls.csv";
+
+		DateFormat callTsFormatter = new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
+		
+		try (Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("C:\\Dados\\" + fileName ), "utf-8"))) 
+		{
+			writer.write("MAC, Acceptance time(m),protocol time(ms),call ts\n");
+			for(String mac : deviceCalls.keySet())
+			{
+				CallHistoric callHistoric = deviceCalls.get(mac);
+				
+				for(CallInfo callInfo : callHistoric.getCalls())
+				{
+					long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
+					
+					long protocolTime = callInfo.getLastAckSentTs().getTime() - callInfo.getLastConnectionAcceptanceTs().getTime();
+					
+					String callTs = callTsFormatter.format(callInfo.getCallTimeStamp());
+					
+					//write data to file
+					writer.write( mac + "," + connAcceptanceTime + "," + protocolTime + "," + callTs + "\n");
+				}
+			}
+		
+		}
+		catch (IOException ex) 
+		{
+		    ex.printStackTrace();
+		} 
+	}
+	
+	
+	public void writeDiscoveryReport()
+	{
+		String fileName = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+		try (Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("C:\\Dados\\" + fileName + "_discovery.csv"), "utf-8"))) 
+		{
+			writer.write("MAC,Discovery time(ms),First call acceptance time(ms)\n");
+			for(String mac : deviceCalls.keySet())
+			{
+				CallHistoric callHistoric = deviceCalls.get(mac);
+				
+				long discoveryTime = callHistoric.getBeaconFoundTs().getTime() - callHistoric.getStartDiscoveryTs().getTime();
+				
+				long firstCallTime = callHistoric.getFirstConnectionAcceptanceTs().getTime() - callHistoric.getBeaconFoundTs().getTime();			
+				
+				//write data to file
+				writer.write(mac + "," + discoveryTime + "," + firstCallTime + "\n");
+			}
+		}
+		catch (IOException ex) 
+		{
+		    ex.printStackTrace();
+		} 
+	}
 	
 	
 	public void printODReport()
