@@ -7,11 +7,13 @@ public class LineEmulator extends Thread
 {
 	private LineInfo lineInfo;
 	private Manager managerRef;
+	private int numOfStops;
 
-	public LineEmulator(LineInfo lineInfo, Manager mgr)
+	public LineEmulator(LineInfo lineInfo, Manager mgr, int numOfStops)
 	{
 		this.lineInfo = lineInfo;
 		this.managerRef = mgr;
+		this.numOfStops = numOfStops;
 	}
 	
 	public void run() 
@@ -23,6 +25,12 @@ public class LineEmulator extends Thread
 		int cont = 2;
 		for(TripSegmentInfo tripSegmentInfo : this.lineInfo.getTripSegmentList())
 		{
+			//cont++;
+//			if(cont > numOfStops)
+//			{
+//				break;
+//			}
+			//else 
 			if((cont++) == this.lineInfo.getTripSegmentList().size())
 			{
 				tripSegmentInfo.setLast(true);
