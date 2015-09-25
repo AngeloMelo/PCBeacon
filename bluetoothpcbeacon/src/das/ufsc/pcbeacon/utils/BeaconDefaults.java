@@ -31,7 +31,10 @@ public class BeaconDefaults
 	public static final int OPP_MODE_AUTHENTIC = 0;
 	public static final int OPP_MODE_DUBIOUS = 1;
 	
-	
+
+	//INTERRUPT MODES
+	public static final int INT_CLOSE_CONNECTION = -1;
+	public static final int INT_NO_RECALL = -2;
 	
 	public static String getTicJson(int secs, int lineId, String lineName, String lastStop)
 	{
