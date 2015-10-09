@@ -23,9 +23,11 @@ public class BeaconDefaults
 	public static final String BEACON_FOUND_TS_KEY = "BEACONFOUNDTS";
 	public static final String FIRST_CONN_ACCEPTANCE_TS_KEY = "FIRSTCONNACCEPTANCETS";
 	public static final String LAST_CONN_REQUEST_TS_KEY = "LASTCONNREQTS";
+	public static final String LAST_AUTHENTIC_CONN_REQUEST_TS_KEY = "LASTAUTHENTICCONNREQTS";
 	public static final String LAST_CONN_ACCEPTANCE_TS_KEY = "LASTCONNACCEPTANCETS";
 	public static final String LAST_TIC_RECEIVED_TS_KEY = "LASTTICRECEIVEDTS";
 	public static final String LAST_ACK_SENT_TS_KEY = "LASTACKSENTTS";
+	public static final String MISSED_CALLS_KEY = "MISSEDCALLS";
 	
 	//OPP MODES
 	public static final int OPP_MODE_AUTHENTIC = 0;
@@ -114,7 +116,20 @@ public class BeaconDefaults
 		}
 		return null;
 	}
+
 	
+	public static Date getLastAuthenticConnectionRequestTs(JSONObject json) throws ParseException 
+	{
+		if(json.has(BeaconDefaults.LAST_AUTHENTIC_CONN_REQUEST_TS_KEY))
+		{
+			String strDate = json.getString(BeaconDefaults.LAST_AUTHENTIC_CONN_REQUEST_TS_KEY);
+			
+			return parseDate(strDate);
+		}
+		return null;
+	}
+	
+
 	
 	public static Date getLastConnectionAcceptanceTs(JSONObject json) throws ParseException 
 	{
@@ -149,6 +164,16 @@ public class BeaconDefaults
 			return parseDate(strDate);
 		}
 		return null;
+	}
+	
+	
+	public static int getMissedCalls(JSONObject json) throws ParseException 
+	{
+		if(json.has(BeaconDefaults.MISSED_CALLS_KEY))
+		{
+			return json.getInt(BeaconDefaults.MISSED_CALLS_KEY);
+		}
+		return -1;
 	}
 
 
