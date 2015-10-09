@@ -130,10 +130,10 @@ public class CommunicationService
 
 	public synchronized void registerCall(String remoteMac, int oppMode,
 			Date startDiscoveryTs, Date beaconFoundTs,
-			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs,
-			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs) 
+			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs, Date lastAuthenticConnectionRequestTs,
+			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs, int missedCalls) 
 	{
-		this.mHandler.registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+		this.mHandler.registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastAuthenticConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs, missedCalls);
 	}
 	
 	/**
@@ -388,13 +388,15 @@ public class CommunicationService
 						Date beaconFoundTs = BeaconDefaults.getBeaconFoundTs(json);
 						Date firstConnectionAcceptanceTs = BeaconDefaults.getFirstConnectionAcceptanceTs(json);
 						Date lastConnectionRequestTs = BeaconDefaults.getLastConnectionRequestTs(json);
+						Date lastAuthenticConnectionRequestTs = BeaconDefaults.getLastAuthenticConnectionRequestTs(json);
 						Date lastConnectionAcceptanceTs = BeaconDefaults.getLastConnectionAcceptanceTs(json);
+						int missedCalls = BeaconDefaults.getMissedCalls(json);
 						Date lastTicTs = BeaconDefaults.getLastTicReceivedTs(json);
 						Date lastAckSentTs = BeaconDefaults.getLastAckSentTs(json);
 						
 						int oppMode = BeaconDefaults.getOppMode(msg);
 						
-						registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+						registerCall(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastAuthenticConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs, missedCalls);
 					}
 					sendMessage(remoteMac, "{" + BeaconDefaults.TIC_KEY + ":" + BeaconDefaults.INT_CLOSE_CONNECTION + "}");
 					stopComunicationThread(remoteMac);
