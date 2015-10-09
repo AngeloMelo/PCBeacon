@@ -47,6 +47,7 @@ public class EmulationReportPrinter
 		List<Long> discoveryTimes = new ArrayList<>() ;
 		List<Long> firstConnTimes = new ArrayList<>() ;
 		List<Long> connectionAcceptanceTimes = new ArrayList<>() ;
+		List<Long> connectionAcceptanceWaitingTimes = new ArrayList<>();
 		List<Long> protocolTimes = new ArrayList<>() ;
 		
 		int totalOnBoard = 0;
@@ -74,6 +75,9 @@ public class EmulationReportPrinter
 				long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
 				connectionAcceptanceTimes.add(connAcceptanceTime);
 				
+				long connAcceptanceWaitingTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastAuthenticConnectionRequestTs().getTime();
+				connectionAcceptanceWaitingTimes.add(connAcceptanceWaitingTime);
+				
 				long protocolTime = callInfo.getLastAckSentTs().getTime() - callInfo.getLastConnectionAcceptanceTs().getTime();
 				protocolTimes.add(protocolTime);
 			}
@@ -83,11 +87,13 @@ public class EmulationReportPrinter
 		DataRank discoveryDataRank = new DataRank(discoveryTimes);
 		DataRank firstConnDataRank = new DataRank(firstConnTimes);
 		DataRank connAcceptanceDataRank = new DataRank(connectionAcceptanceTimes);
+		DataRank connAcceptanceWaitingDataRank = new DataRank(connectionAcceptanceWaitingTimes);
 		DataRank protocolDataRank = new DataRank(protocolTimes);
 		
 		System.out.println("Discovery time: " + discoveryDataRank.getAvg() + "(avg) " + discoveryDataRank.getMedian() + "(median) " + discoveryDataRank.getMin() + "(min) " + discoveryDataRank.getMax() + "(max)");
 		System.out.println("First connection acceptance time: " + firstConnDataRank.getAvg() + "(avg) " + firstConnDataRank.getMedian() + "(median) " + firstConnDataRank.getMin() + "(min) " + firstConnDataRank.getMax() + "(max)");
 		System.out.println("Connection acceptance time: " + connAcceptanceDataRank.getAvg() + " (avg) " + connAcceptanceDataRank.getMedian() + "(median) " + connAcceptanceDataRank.getMin() + " (min) " + connAcceptanceDataRank.getMax() + "(max)");
+		System.out.println("Total acceptance waiting time: " + connAcceptanceWaitingDataRank.getAvg() + " (avg) " + connAcceptanceWaitingDataRank.getMedian() + "(median) " + connAcceptanceWaitingDataRank.getMin() + " (min) " + connAcceptanceWaitingDataRank.getMax() + "(max)");
 		System.out.println("Protocol execution time: " +  protocolDataRank.getAvg() + " (avg) " + protocolDataRank.getMedian() + "(median) " + protocolDataRank.getMin() + " (min) " + protocolDataRank.getMax() + " (max)");
 		System.out.println("Total of passengers:" +  totalOnBoard);
 		System.out.println("Total of calls:" +  totalCall);
@@ -102,7 +108,7 @@ public class EmulationReportPrinter
 		
 		try (Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("C:\\Dados\\" + fileName ), "utf-8"))) 
 		{
-			writer.write("MAC, Acceptance time(m),protocol time(ms),call ts\n");
+			writer.write("MAC, Acceptance time(ms),Acceptance waiting time(ms),protocol time(ms),missed calls, call ts\n");
 			for(String mac : deviceCalls.keySet())
 			{
 				CallHistoric callHistoric = deviceCalls.get(mac);
@@ -111,12 +117,16 @@ public class EmulationReportPrinter
 				{
 					long connAcceptanceTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastConnectionRequestTs().getTime();
 					
+					long connAcceptanceWaitingTime = callInfo.getLastConnectionAcceptanceTs().getTime() - callInfo.getLastAuthenticConnectionRequestTs().getTime();
+					
 					long protocolTime = callInfo.getLastAckSentTs().getTime() - callInfo.getLastConnectionAcceptanceTs().getTime();
+					
+					int missedCalls = callInfo.getMissedCalls();
 					
 					String callTs = callTsFormatter.format(callInfo.getCallTimeStamp());
 					
 					//write data to file
-					writer.write( mac + "," + connAcceptanceTime + "," + protocolTime + "," + callTs + "\n");
+					writer.write( mac + "," + connAcceptanceTime + "," + connAcceptanceWaitingTime + "," + protocolTime + "," + missedCalls + "," + callTs + "\n");
 				}
 			}
 		
