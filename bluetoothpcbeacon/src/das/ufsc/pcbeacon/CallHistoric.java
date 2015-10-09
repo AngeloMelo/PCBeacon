@@ -65,6 +65,7 @@ class CallInfo
 	
 	//performance data
 	private Date lastConnectionRequestTs;
+	private Date lastAuthenticConnectionRequestTs;
 	private Date lastConnectionAcceptanceTs;
 	private Date lastTicTs; 
 	private Date lastAckSentTs;
@@ -74,6 +75,7 @@ class CallInfo
 	private String currentTripSegmentOrign;
 	private String currentTripSegmentDestination;
 	private int currentTripSegmentId;
+	private int missedCalls;
 		
 	public CallInfo() 
 	{
@@ -148,8 +150,7 @@ class CallInfo
 		return currentTripSegmentDestination;
 	}
 
-	public void setCurrentTripSegmentDestination(
-			String currentTripSegmentDestination) {
+	public void setCurrentTripSegmentDestination(String currentTripSegmentDestination) {
 		this.currentTripSegmentDestination = currentTripSegmentDestination;
 	}
 
@@ -159,5 +160,25 @@ class CallInfo
 
 	public void setCurrentTripSegmentId(int currentStopId) {
 		this.currentTripSegmentId = currentStopId;
+	}
+
+	public Date getLastAuthenticConnectionRequestTs() 
+	{
+		return lastAuthenticConnectionRequestTs;
+	}
+	
+	public void setLastAuthenticConnectionRequestTs(Date lastAuthenticConnectionRequestTs) 
+	{
+		this.lastAuthenticConnectionRequestTs = lastAuthenticConnectionRequestTs;
+	}
+
+	public int getMissedCalls() 
+	{
+		return this.missedCalls;
+	}
+	
+	public void setMissedCalls(int missedCalls) 
+	{
+		this.missedCalls = missedCalls;
 	}
 }
