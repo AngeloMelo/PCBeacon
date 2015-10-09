@@ -135,8 +135,8 @@ public class Manager
 
 	private void addHistoryEntry(String mac, int oppMode,
 			Date startDiscoveryTs, Date beaconFoundTs,
-			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs,
-			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs)
+			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs, Date lastAuthenticConnectionRequestTs, 
+			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs, int missedCalls)
 	{
 		Date timeStamp = new Date();
 		
@@ -148,9 +148,11 @@ public class Manager
 		callInfo.setCurrentTripSegmentTs(this.currentTripSegmentInfo.getTripSegmentStartTs());
 		callInfo.setOppMode(oppMode);
 		callInfo.setLastConnectionRequestTs(lastConnectionRequestTs);
+		callInfo.setLastAuthenticConnectionRequestTs(lastAuthenticConnectionRequestTs);
 		callInfo.setLastConnectionAcceptanceTs(lastConnectionAcceptanceTs);
 		callInfo.setLastTicTs(lastTicTs);
 		callInfo.setLastAckSentTs(lastAckSentTs);
+		callInfo.setMissedCalls(missedCalls);
 		
 		if(this.deviceCalls.containsKey(mac))
 		{
@@ -358,10 +360,10 @@ public class Manager
 	
 	public void registerCall(String remoteMac, int oppMode,
 			Date startDiscoveryTs, Date beaconFoundTs,
-			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs,
-			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs)
+			Date firstConnectionAcceptanceTs, Date lastConnectionRequestTs, Date lastAuthenticConnectionRequestTs,
+			Date lastConnectionAcceptanceTs, Date lastTicTs, Date lastAckSentTs, int missedCalls)
 	{
-		addHistoryEntry(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs);
+		addHistoryEntry(remoteMac, oppMode, startDiscoveryTs, beaconFoundTs, firstConnectionAcceptanceTs, lastConnectionRequestTs, lastAuthenticConnectionRequestTs, lastConnectionAcceptanceTs, lastTicTs, lastAckSentTs, missedCalls);
 		validateHistoric(remoteMac, oppMode);
 	}
 }
